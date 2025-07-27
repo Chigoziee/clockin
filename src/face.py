@@ -28,7 +28,7 @@ class FaceAPI:
             elif num_faces > 1:
                 raise Exception("Multiple face detected in the image")
             return True
-        elif response.status_code == 413:
+        if response.status_code == 413:
             raise Exception("Image file is too large")
-        elif response.status_code == 400:
+        if response.status_code == 400:
             raise Exception("Invalid image format")

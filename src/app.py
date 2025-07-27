@@ -1,10 +1,9 @@
-# app/main.py
 from fastapi import FastAPI
-from routes import auth
+from routes import admin
 
 
 app = FastAPI(title="Employee Biometric Sign-in System")
-app.include_router(auth.user_router)
+app.include_router(admin.admin_router)
 
 
 @app.get("/")
