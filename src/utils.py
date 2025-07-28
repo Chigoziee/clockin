@@ -1,48 +1,19 @@
+from fastapi import HTTPException
 from passlib.context import CryptContext
 from jose import jwt
 from datetime import datetime, timedelta, timezone
 import os
 from mailjet_rest import Client
-import cloudinary
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-JWT_SECRET = os.getenv("JWT_SECRET", "defaultsecret")
-JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+
+JWT_SECRET = os.getenv("JWT_SECRET")
+JWT_ALGORITHM = os.getenv("JWT_ALGORITHM")
 MAILJET_API_KEY = os.environ["MAILJET_API_KEY"]
 MAILJET_API_SECRET = os.environ["MAILJET_API_SECRET"]
 mailjet = Client(auth=(MAILJET_API_KEY, MAILJET_API_SECRET), version='v3.1')
 base_url = os.getenv("BASE_URL", "http://localhost:8000")
 
-# Configure Cloudinary    
-cloudinary.config( 
-    cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME"),
-    api_key = os.getenv("CLOUDINARY_API_KEY"),
-    api_secret = os.getenv("CLOUDINARY_API_SECRET"),
-    secure=True)
-
-def cd_upload(file):
-    result = cloudinary.uploader.upload(file)
-    return result['secure_url']
-
-def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
-
-def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
-
-def create_access_token(data: dict, expires_minutes=60):
-    to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(minutes=expires_minutes)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
-
-def decode_access_token(token: str):
-    try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        return payload
-    except jwt.JWTError:
-        return None
-    
+  
 async def password_reset(email: str):
     expire = datetime.now(timezone.utc) + timedelta(minutes=15)  # expires in 15 minutes
     payload = {"sub": email, "exp": expire}
@@ -136,7 +107,7 @@ async def password_reset(email: str):
     
     result = mailjet.send.create(data=data) 
     if result.status_code != 200:
-        raise Exception("Failed to send verification email")
+        raise HTTPException(status_code=400, detail="Failed to send verification email")
 
 def email_verification(email: str, firstName: str):
     expire = datetime.now(timezone.utc) + timedelta(hours=1)  # expires in 1 hour
@@ -148,7 +119,7 @@ def email_verification(email: str, firstName: str):
                                     "Name": "CLOCKIN"},
                           "To": [{"Email": email,
                                   "Name": firstName}],
-                        "Subject": "Password reset", 
+                        "Subject": "Verify email", 
                         "HTMLPart": f"""<!DOCTYPE html>
                                     <html lang="en">
                                     <head>
@@ -224,4 +195,4 @@ def email_verification(email: str, firstName: str):
 
     result = mailjet.send.create(data=data)
     if result.status_code != 200:
-        raise Exception("Failed to send verification email")
+        raise HTTPException(status_code=400, detail="Failed to send verification email")

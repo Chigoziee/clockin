@@ -1,5 +1,4 @@
-# app/models.py
-from datetime import datetime
+from datetime import datetime, timezone
 from pydantic import BaseModel, EmailStr, Field
 
 
@@ -11,7 +10,7 @@ class Admins(BaseModel):
     password: str
     organization: str
     verified: bool = False
-    createdAt: datetime = Field(default_factory=datetime.utcnow)
+    createdAt: datetime
 
 class SignupRequest(BaseModel):
     firstName: str
@@ -24,11 +23,15 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
-class User(BaseModel):
+class Users(BaseModel):
+    image_url: str = None
+    createdAt: datetime    
+    updatedAt: datetime 
     email: EmailStr
     firstName: str
     lastName: str
     designation: str
+    organization: str
 
 class TokenResponse(BaseModel):
     access_token: str
