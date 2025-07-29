@@ -1,11 +1,12 @@
 from fastapi import APIRouter, HTTPException, status, Form, UploadFile, File, Depends
-from db import users_collection, admin_collection
-from cd import cd_upload, delete_cd_image
-from security import get_current_user
-from models import Users
+from data.db import users_collection, admin_collection
+from helper.cd import cd_upload, delete_cd_image
+from helper.security import get_current_user
+from helper.utils import attendance_log_limiter as atll
+from data.models import Users
 import base64
-from face import FaceAPI
-from datetime import datetime, timezone
+from helper.face import FaceAPI
+from datetime import datetime, timedelta, timezone
 
 
 user_router = APIRouter(prefix="/{admin_username}", tags=["Actions"])
@@ -76,7 +77,6 @@ async def register(
             designation=designation.strip().title(),
             image_url=image_url,
             createdAt=datetime.now(timezone.utc),
-            updatedAt=datetime.now(timezone.utc),
             organization=admin_exists['organization'])
                             
         await users_collection.insert_one(user_data.model_dump())
@@ -121,6 +121,13 @@ async def delete_user(
         raise HTTPException(status_code=413, detail="Image file is larger than 2MB")    
     image_data = base64.b64encode(img_read).decode('utf-8')
     
-    await face.compare_face(image_data, user_exists['image_url'])
+    await face.compare_face(image_data, user_exists.get("image_url", ""))
+    current_time = datetime.now(timezone.utc) + timedelta(hours=1)
+    current_time = current_time.strftime("%Y-%m-%d %H:%M:%S")
+    attendance_logs = user_exists.get("attendance", [])
+
+    attendance_logs = atll(attendance_logs, current_time)
+    
+    await users_collection.update_one({"email": user_exists["email"]}, {"$set": {"attendance": attendance_logs}})
     
     return {"message": f"{user_exists['firstName']} {user_exists['lastName']} signed in successfully"}

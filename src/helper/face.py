@@ -38,6 +38,8 @@ class FaceAPI:
     
 
     async def compare_face(self, image_data: str, image_url: str):
+        if not image_url:
+            raise HTTPException(status_code=400, detail="User has no image for reference")
         async with httpx.AsyncClient(timeout=600, verify=False) as client:
             respon = await client.get(image_url)
         if respon.status_code != 200:

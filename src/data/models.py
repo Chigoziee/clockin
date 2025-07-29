@@ -25,13 +25,13 @@ class LoginRequest(BaseModel):
 
 class Users(BaseModel):
     image_url: str = None
-    createdAt: datetime    
-    updatedAt: datetime 
+    createdAt: datetime 
     email: EmailStr
     firstName: str
     lastName: str
     designation: str
     organization: str
+    attendance: list = Field(default_factory=list)
 
 class TokenResponse(BaseModel):
     access_token: str

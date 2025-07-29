@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException
-from db import admin_collection
-from utils import email_verification, password_reset 
-from security import hash_password, verify_password, create_access_token, decode_access_token, get_current_user
-from models import Admins, SignupRequest, LoginRequest, TokenResponse, EmailRequest, PasswordChange
+from data.db import admin_collection
+from helper.utils import email_verification, password_reset 
+from helper.security import hash_password, verify_password, create_access_token, decode_access_token, get_current_user
+from data.models import Admins, SignupRequest, LoginRequest, TokenResponse, EmailRequest, PasswordChange
 import random
 from datetime import datetime, timezone
 

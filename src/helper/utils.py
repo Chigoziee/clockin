@@ -8,10 +8,19 @@ from mailjet_rest import Client
 
 JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM")
-MAILJET_API_KEY = os.environ["MAILJET_API_KEY"]
-MAILJET_API_SECRET = os.environ["MAILJET_API_SECRET"]
+MAILJET_API_KEY = os.getenv("MAILJET_API_KEY")
+MAILJET_API_SECRET = os.getenv("MAILJET_API_SECRET")
 mailjet = Client(auth=(MAILJET_API_KEY, MAILJET_API_SECRET), version='v3.1')
 base_url = os.getenv("BASE_URL", "http://localhost:8000")
+
+
+def attendance_log_limiter(logs: list, new_log: str):
+    if len(logs) < 4:
+        logs.append(new_log)
+    else:
+        logs.pop(0)
+        logs.append(new_log)
+    return logs
 
   
 async def password_reset(email: str):
