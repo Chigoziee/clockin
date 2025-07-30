@@ -1,16 +1,14 @@
 import httpx
-from dotenv import load_dotenv
 import os
 from fastapi import HTTPException
 import base64
-
-load_dotenv()
+from core.config import settings
 
 
 class FaceAPI:
     def __init__(self):
-        self.api_key = os.getenv("FACE_API_KEY")
-        self.api_secret = os.getenv("FACE_API_SECRET")
+        self.api_key = settings.FACE_API_KEY
+        self.api_secret = settings.FACE_API_SECRET
         self.detect_url ="https://api-us.faceplusplus.com/facepp/v3/detect"
         self.compare_url = "https://api-us.faceplusplus.com/facepp/v3/compare"
         

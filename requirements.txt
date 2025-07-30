@@ -1,6 +1,6 @@
 fastapi==0.116.1
-dotenv==0.9.9
-python-dotenv==1.1.1
+# dotenv==0.9.9
+# python-dotenv==1.1.1
 motor==3.7.1
 pymongo==4.13.2
 passlib==1.7.4
@@ -12,3 +12,4 @@ pydantic[email]==2.2.0
 mailjet-rest==1.5.1
 cloudinary==1.44.1
 python-multipart==0.0.20
+pydantic-settings==2.10.1

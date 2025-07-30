@@ -1,14 +1,12 @@
 from passlib.context import CryptContext
 from jose import jwt
 from datetime import datetime, timedelta, timezone
-import os
-from fastapi import Depends, HTTPException, status, Request
-from fastapi.security import OAuth2PasswordBearer
+from core.config import settings
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-JWT_SECRET = os.getenv("JWT_SECRET", "defaultsecret")
-JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+JWT_SECRET = settings.JWT_SECRET
+JWT_ALGORITHM = settings.JWT_ALGORITHM
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
@@ -29,14 +27,3 @@ def decode_access_token(token: str):
     except jwt.JWTError:
         return None
 
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login") 
-
-def get_current_user(token: str = Depends(oauth2_scheme)):
-    payload = decode_access_token(token)
-    if not payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-        )
-    return payload

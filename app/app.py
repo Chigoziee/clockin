@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from routes import admin, user
+from api.routes import admin, user
 
 
 app = FastAPI(title="Employee Biometric Sign-in System")

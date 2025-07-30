@@ -5,13 +5,13 @@ import os
 import asyncio
 from dotenv import load_dotenv
 from fastapi import HTTPException  
+from core.config import settings
 
 
-load_dotenv()
 cloudinary.config( 
-    cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME"),
-    api_key = os.getenv("CLOUDINARY_API_KEY"),
-    api_secret = os.getenv("CLOUDINARY_API_SECRET"),
+    cloud_name = settings.CLOUDINARY_CLOUD_NAME,
+    api_key = settings.CLOUDINARY_API_KEY,
+    api_secret = settings.CLOUDINARY_API_SECRET,
     secure=True)
 
 async def cd_upload(file):

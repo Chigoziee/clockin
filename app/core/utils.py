@@ -1,17 +1,16 @@
 from fastapi import HTTPException
-from passlib.context import CryptContext
 from jose import jwt
 from datetime import datetime, timedelta, timezone
-import os
 from mailjet_rest import Client
+from core.config import settings
 
+JWT_SECRET = settings.JWT_SECRET
+JWT_ALGORITHM = settings.JWT_ALGORITHM
+MAILJET_API_KEY = settings.MAILJET_API_KEY
+MAILJET_API_SECRET = settings.MAILJET_API_SECRET
+BASE_URL = settings.BASE_URL
 
-JWT_SECRET = os.getenv("JWT_SECRET")
-JWT_ALGORITHM = os.getenv("JWT_ALGORITHM")
-MAILJET_API_KEY = os.getenv("MAILJET_API_KEY")
-MAILJET_API_SECRET = os.getenv("MAILJET_API_SECRET")
 mailjet = Client(auth=(MAILJET_API_KEY, MAILJET_API_SECRET), version='v3.1')
-base_url = os.getenv("BASE_URL", "http://localhost:8000")
 
 
 def attendance_log_limiter(logs: list, new_log: str):
@@ -27,7 +26,7 @@ async def password_reset(email: str):
     expire = datetime.now(timezone.utc) + timedelta(minutes=15)  # expires in 15 minutes
     payload = {"sub": email, "exp": expire}
     token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
-    reset_link = f"{base_url}/admin/reset-password-token?token={token}"
+    reset_link = f"{BASE_URL}/admin/reset-password-token?token={token}"
     data = {'Messages': [{"From": { "Email": "sk.hyginus@gmail.com",
                                     "Name": "CLOCKIN"},
                           "To": [{"Email": email}],
@@ -123,7 +122,7 @@ def email_verification(email: str, firstName: str):
     payload = {"sub": email, "exp": expire}
     token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
     
-    verification_link = f"{base_url}/admin/verify-email?token={token}"
+    verification_link = f"{BASE_URL}/admin/verify-email?token={token}"
     data = {'Messages': [{"From": { "Email": "sk.hyginus@gmail.com",
                                     "Name": "CLOCKIN"},
                           "To": [{"Email": email,

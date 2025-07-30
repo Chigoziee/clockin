@@ -1,8 +1,11 @@
 from fastapi import APIRouter, HTTPException
-from data.db import admin_collection
-from helper.utils import email_verification, password_reset 
-from helper.security import hash_password, verify_password, create_access_token, decode_access_token, get_current_user
-from data.models import Admins, SignupRequest, LoginRequest, TokenResponse, EmailRequest, PasswordChange
+from db.mongo import admin_collection
+from core.security import hash_password, verify_password, create_access_token, decode_access_token
+from core.utils import email_verification, password_reset
+from models.auth import SignupRequest, LoginRequest, PasswordChange
+from models.admin import Admins
+from models.token import TokenResponse
+from models.common import EmailRequest
 import random
 from datetime import datetime, timezone
 
