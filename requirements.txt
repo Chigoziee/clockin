@@ -1,6 +1,4 @@
 fastapi==0.116.1
-# dotenv==0.9.9
-# python-dotenv==1.1.1
 motor==3.7.1
 pymongo==4.13.2
 passlib==1.7.4
