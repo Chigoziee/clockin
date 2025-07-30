@@ -8,9 +8,10 @@ from models.token import TokenResponse
 from models.common import EmailRequest
 import random
 from datetime import datetime, timezone
+from core.utils import is_token_expired
 
 
-admin_router = APIRouter(prefix="/admin", tags=["Users"])
+admin_router = APIRouter(prefix="/admin", tags=["Admins"])
 
 
 @admin_router.post("/signup")
@@ -25,13 +26,13 @@ async def signup(payload: SignupRequest):
     username_check = await admin_collection.find_one({"username": username})
     while username_check:
         username = (payload.firstName[0] + payload.lastName).lower() + str(random.randint(100, 999))
-        username_check = admin_collection.find_one({"username": username})
+        username_check = await admin_collection.find_one({"username": username})
 
     # Create new Admin 
     admin = Admins(
         firstName=payload.firstName.strip().title(),
         lastName=payload.lastName.strip().title(),
-        email=payload.email,
+        email = payload.email.strip().lower(),
         password=hash_password(payload.password),
         organization=payload.organization.strip().title(),
         username=username,
@@ -50,7 +51,7 @@ async def login(payload: LoginRequest):
         raise HTTPException(status_code=404, detail="User not found")
 
     if not verify_password(payload.password, admin["password"]):
-        raise HTTPException(status_code=401, detail="Invalid password")
+        raise HTTPException(status_code=401, detail="Invalid credentials")
 
     token = create_access_token({"sub": str(admin["username"]), "email": admin["email"]})
     return TokenResponse(access_token=token)
@@ -62,12 +63,14 @@ async def verify_email(token: str):
     email = token_data.get("sub")
     if email is None:
         raise HTTPException(status_code=400, detail="Invalid token")
-    if datetime.fromtimestamp(token_data.get("exp"), tz=timezone.utc) < datetime.now(timezone.utc):
+    if is_token_expired(token_data):
         raise HTTPException(status_code=400, detail="Token has expired")
+    admin = await admin_collection.find_one({"email": email})
+    if admin.get("verified"):
+        return {"message": "Email already verified"}
     # Update user in DB to verified
-    await admin_collection.update_one(
-        {"email": email}, {"$set": {"verified": True}})
-    
+    await admin_collection.update_one({"email": email}, 
+                                      {"$set": {"verified": True}})
     return {"message": "Email verified successfully!"}
 
 
@@ -93,7 +96,7 @@ async def reset_password(token: str):
     email = token_data.get("sub")
     if email is None:
         raise HTTPException(status_code=400, detail="Invalid token")
-    if datetime.fromtimestamp(token_data.get("exp"), tz=timezone.utc) < datetime.now(timezone.utc):
+    if is_token_expired(token_data):
         raise HTTPException(status_code=400, detail="Token has expired")
     
     return {"message": "Token is valid", "email": email}
@@ -104,7 +107,7 @@ async def change_password(payload: PasswordChange):
     email = token_data.get("sub")
     if email is None:
         raise HTTPException(status_code=400, detail="Invalid token")
-    if datetime.fromtimestamp(token_data.get("exp"), tz=timezone.utc) < datetime.now(timezone.utc):
+    if is_token_expired(token_data):
         raise HTTPException(status_code=400, detail="Token has expired")
 
     hashed_password = hash_password(payload.new_password)

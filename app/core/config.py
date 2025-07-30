@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     CLOUDINARY_API_KEY: str
     CLOUDINARY_API_SECRET: str
     BASE_URL: str
+    FACE_MATCH_THRESHOLD: int = 80
 
     model_config = SettingsConfigDict(
         env_file="../.env",

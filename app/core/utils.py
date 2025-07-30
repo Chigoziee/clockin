@@ -3,6 +3,7 @@ from jose import jwt
 from datetime import datetime, timedelta, timezone
 from mailjet_rest import Client
 from core.config import settings
+from db.mongo import admin_collection
 
 JWT_SECRET = settings.JWT_SECRET
 JWT_ALGORITHM = settings.JWT_ALGORITHM
@@ -13,6 +14,15 @@ BASE_URL = settings.BASE_URL
 mailjet = Client(auth=(MAILJET_API_KEY, MAILJET_API_SECRET), version='v3.1')
 
 
+async def get_verified_admin(username: str) -> dict:
+    admin = await admin_collection.find_one({"username": username})
+    if not admin:
+        raise HTTPException(status_code=404, detail="Admin not found")
+    if not admin.get("verified"):
+        raise HTTPException(status_code=403, detail="Admin not verified")
+    return admin
+
+
 def attendance_log_limiter(logs: list, new_log: str):
     if len(logs) < 4:
         logs.append(new_log)
@@ -21,6 +31,11 @@ def attendance_log_limiter(logs: list, new_log: str):
         logs.append(new_log)
     return logs
 
+def is_token_expired(token_data: dict) -> bool:
+    exp = token_data.get("exp")
+    if not exp:
+        return True
+    return datetime.fromtimestamp(token_data["exp"], tz=timezone.utc) < datetime.now(timezone.utc)
   
 async def password_reset(email: str):
     expire = datetime.now(timezone.utc) + timedelta(minutes=15)  # expires in 15 minutes

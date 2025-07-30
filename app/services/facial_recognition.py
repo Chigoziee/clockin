@@ -1,5 +1,4 @@
 import httpx
-import os
 from fastapi import HTTPException
 import base64
 from core.config import settings
@@ -13,7 +12,7 @@ class FaceAPI:
         self.compare_url = "https://api-us.faceplusplus.com/facepp/v3/compare"
         
 
-    async def detect_face(self, image_data: str):
+    async def detect_face(self, image_data: str) -> bool:
         payload = {
             "api_key": self.api_key,
             "api_secret": self.api_secret,
@@ -37,7 +36,7 @@ class FaceAPI:
 
     async def compare_face(self, image_data: str, image_url: str):
         if not image_url:
-            raise HTTPException(status_code=400, detail="User has no image for reference")
+            raise HTTPException(status_code=400, detail="Face mismatch. Try again.")
         async with httpx.AsyncClient(timeout=600, verify=False) as client:
             respon = await client.get(image_url)
         if respon.status_code != 200:
@@ -56,8 +55,8 @@ class FaceAPI:
         
         if response.status_code == 200:
             confidence = response.json().get("confidence", 0)
-            if confidence < 80:
-                raise HTTPException(status_code=400, detail="Face does not match")
+            if confidence < settings.FACE_MATCH_THRESHOLD:
+                raise HTTPException(status_code=400, detail="Face mismatch. Try again.")
             return True
         if response.status_code == 413:
             raise HTTPException(status_code=413, detail="Image file is larger than 2MB")

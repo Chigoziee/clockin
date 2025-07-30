@@ -1,15 +1,15 @@
 from fastapi import APIRouter, HTTPException, status, Form, UploadFile, File, Depends
-from db.mongo import admin_collection, users_collection
+from db.mongo import users_collection
 from services.cloudinary_services import cd_upload, delete_cd_image
 from api.deps import get_current_user
-from core.utils import attendance_log_limiter as atll
+from core.utils import is_token_expired, get_verified_admin, attendance_log_limiter as atll
 from models.user import Users
 import base64
 from services.facial_recognition import FaceAPI
 from datetime import datetime, timedelta, timezone
 
 
-user_router = APIRouter(prefix="/{admin_username}", tags=["Actions"])
+user_router = APIRouter(prefix="/{admin_username}", tags=["Users"])
 face = FaceAPI()
 
 @user_router.get("/users")
@@ -17,16 +17,10 @@ async def get_users(admin_username: str, current_user: dict = Depends(get_curren
 
     if current_user.get("sub") != admin_username:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized action")
-    if datetime.fromtimestamp(current_user.get("exp"), tz=timezone.utc) < datetime.now(timezone.utc):
+    if is_token_expired(current_user):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Please login again to continue")
     
-    admin_exists = await admin_collection.find_one({"username": admin_username})
-
-    if not admin_exists:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unauthorized action - Admin not found")
-    
-    if admin_exists.get("verified") is False:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized action - Admin not verified yet")
+    admin_exists = await get_verified_admin(admin_username)
     
     users = await users_collection.find({"organization": admin_exists["organization"]}).to_list()
     if not users:
@@ -51,17 +45,12 @@ async def register(
 ):
     if current_user.get("sub") != admin_username:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized action")
-    if datetime.fromtimestamp(current_user.get("exp"), tz=timezone.utc) < datetime.now(timezone.utc):
+    if is_token_expired(current_user):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Please login again to continue")
     
-    admin_exists =  await admin_collection.find_one({"username": admin_username})
-    if not admin_exists:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unauthorized action - Admin not found")
-
-    if admin_exists.get("verified") is False:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized action - Admin not verified yet")
+    admin_exists =  await get_verified_admin(admin_username)
     
-    if await users_collection.find_one({"email": email.strip()}):
+    if await users_collection.find_one({"email": email.strip().lower()}):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User already exists")
     
     if not image.content_type.startswith("image/"):
@@ -90,10 +79,10 @@ async def register(
     
     
 @user_router.delete("/delete/{user_email}")
-async def delete_user(admin_username: str, user_email: str, current_user: dict = Depends(get_current_user)):
+async def signin_user(admin_username: str, user_email: str, current_user: dict = Depends(get_current_user)):
     if current_user.get("sub") != admin_username:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized action")
-    if datetime.fromtimestamp(current_user.get("exp"), tz=timezone.utc) < datetime.now(timezone.utc):
+    if is_token_expired(current_user):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Please login again to continue")
     
     user = await users_collection.find_one({"email": user_email.strip()})
@@ -113,8 +102,8 @@ async def delete_user(
     ):
     if current_user.get("sub") != admin_username:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized action")
-    if datetime.fromtimestamp(current_user.get("exp"), tz=timezone.utc) < datetime.now(timezone.utc):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Please login again to continue")
+    if is_token_expired(current_user):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Please login to continue")
     
     user_exists = await users_collection.find_one({"email": user_email.strip()})
     if not user_exists:
@@ -133,7 +122,8 @@ async def delete_user(
     attendance_logs = user_exists.get("attendance", [])
     if len(attendance_logs) > 0:
          # If the last log is from today, do not allow another sign-in
-        if attendance_logs[-1].split(" ")[0] == current_time.split(" ")[0]:
+        last_signin = datetime.strptime(attendance_logs[-1], "%Y-%m-%d %H:%M:%S").date()
+        if last_signin == datetime.now(timezone.utc).date():
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{user_exists['firstName']} {user_exists['lastName']} already signed in for today")
 
     attendance_logs = atll(attendance_logs, current_time)
